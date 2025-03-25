@@ -25,7 +25,7 @@ A proposta do controle é ser um dispositivo de mesa com um volante baseado em a
 ### **Estrutura Geral**
 ---
 
-![Estrutura](diagrama.jpg)
+![Estrutura](diagrama.png)
 
 ---
 
@@ -50,6 +50,6 @@ A proposta do controle é ser um dispositivo de mesa com um volante baseado em a
 ### **Proposta Inicial**
 ---
 
-![Proposta](controle.png)
+![Proposta](controle.jpg)
 
 ---
