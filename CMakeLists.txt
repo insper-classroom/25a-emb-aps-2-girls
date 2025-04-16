@@ -26,8 +26,6 @@ project(pico_emb)
 pico_sdk_init()
 
 # rest of your project
-
-add_subdirectory(oled1_lib)
 add_subdirectory(freertos)
 add_subdirectory(main)
 
