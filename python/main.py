@@ -5,6 +5,7 @@ import pyautogui
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
+# import threading
 pyautogui.PAUSE = 0.0
 
 
@@ -15,32 +16,33 @@ def move_mouse(axis, value):
     elif axis == 1:
         pyautogui.moveRel(0, value)
 
-def controle(ser):
-    """
-    Loop principal que lê bytes da porta serial em loop infinito.
-    Aguarda o byte 0xFF e então lê 3 bytes: axis (1 byte) + valor (2 bytes).
-    """
-    while True:
-        # Aguardar byte de sincronização
-        sync_byte = ser.read(size=1)
-        if not sync_byte:
-            continue
-        if sync_byte[0] == 0xFF:
-            # Ler 3 bytes (axis + valor(2b))
-            data = ser.read(size=3)
-            if len(data) < 3:
-                continue
-            print(data)
-            axis, value = parse_data(data)
-            move_mouse(axis, value)
+# def controle(ser):
+#     """
+#     Loop principal que lê bytes da porta serial em loop infinito.
+#     Aguarda o byte 0xFF e então lê 3 bytes: axis (1 byte) + valor (2 bytes).
+#     """
+#     while True:
+#         # Aguardar byte de sincronização
+#         sync_byte = ser.read(size=1)
+#         if not sync_byte:
+#             continue
+#         if sync_byte[0] == 0xFF:
+#             # Ler 3 bytes (axis + valor(2b))
+#             data = ser.read(size=3)
+#             if len(data) < 3:
+#                 continue
+#             print(data)
+#             axis, value = parse_data(data)
+#             move_mouse(axis, value)
+
 
 def controle_teclas_setas(ser):
     teclas_btn = {
         0: "z",      # A
         1: "x",      # B
-        2: "c",      # X
-        3: "v",      # Y
-        4: "space",  # SELECT
+        2: "a",      # X
+        3: "s",      # Y
+        4: "shift",  # SELECT
         5: "enter",  # START
     }
 
@@ -143,7 +145,6 @@ def conectar_porta( port_name, root, botao_conectar, status_label, mudar_cor_cir
         botao_conectar.config(text="Conectado")  # Update button text to indicate connection
         root.update()
 
-        # Inicia o loop de leitura (bloqueante).
         controle_teclas_setas(ser)
 
     except KeyboardInterrupt:

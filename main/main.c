@@ -40,7 +40,6 @@ void btn_callback(uint gpio, uint32_t events)
 {
     if (gpio == BTN_A && events == 0x4)
     { // fall edge
-        printf("enrtou no A");
         xSemaphoreGiveFromISR(xSemaphore_BTN_A, 0);
     }
     if (gpio == BTN_B && events == 0x4)
@@ -116,36 +115,37 @@ void btn_task(void *p)
 
     while (true)
     {
-        if (xSemaphoreTake(xSemaphore_BTN_A, pdMS_TO_TICKS(500)) == pdTRUE)
+        if (xSemaphoreTake(xSemaphore_BTN_A, pdMS_TO_TICKS(50)) == pdTRUE)
         {
             int info_botao = 0; // botao pressionado
             xQueueSend(xQueueBTNS, &info_botao, 0);
         }
-        if (xSemaphoreTake(xSemaphore_BTN_B, pdMS_TO_TICKS(500)) == pdTRUE)
+        if (xSemaphoreTake(xSemaphore_BTN_B, pdMS_TO_TICKS(50)) == pdTRUE)
         {
             int info_botao = 1;
             xQueueSend(xQueueBTNS, &info_botao, 0);
         }
-        if (xSemaphoreTake(xSemaphore_BTN_X, pdMS_TO_TICKS(500)) == pdTRUE)
+        if (xSemaphoreTake(xSemaphore_BTN_X, pdMS_TO_TICKS(50)) == pdTRUE)
         {
             int info_botao = 2;
             xQueueSend(xQueueBTNS, &info_botao, 0);
         }
-        if (xSemaphoreTake(xSemaphore_BTN_Y, pdMS_TO_TICKS(500)) == pdTRUE)
+        if (xSemaphoreTake(xSemaphore_BTN_Y, pdMS_TO_TICKS(50)) == pdTRUE)
         {
             int info_botao = 3;
             xQueueSend(xQueueBTNS, &info_botao, 0);
         }
-        if (xSemaphoreTake(xSemaphore_BTN_SELECT, pdMS_TO_TICKS(500)) == pdTRUE)
+        if (xSemaphoreTake(xSemaphore_BTN_SELECT, pdMS_TO_TICKS(50)) == pdTRUE)
         {
             int info_botao = 4;
             xQueueSend(xQueueBTNS, &info_botao, 0);
         }
-        if (xSemaphoreTake(xSemaphore_BTN_START, pdMS_TO_TICKS(500)) == pdTRUE)
+        if (xSemaphoreTake(xSemaphore_BTN_START, pdMS_TO_TICKS(50)) == pdTRUE)
         {
             int info_botao = 5;
             xQueueSend(xQueueBTNS, &info_botao, 0);
         }
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 void x_task(void *p)
@@ -193,7 +193,7 @@ void x_task(void *p)
             }
         }
 
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 
@@ -241,7 +241,7 @@ void y_task(void *p)
             }
         }
 
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 void uart_task(void *p)
@@ -255,7 +255,7 @@ void uart_task(void *p)
 
     while (1)
     {
-        if (xQueueReceive(xQueueADC, &recebido, portMAX_DELAY))
+        if (xQueueReceive(xQueueADC, &recebido, pdMS_TO_TICKS(100)))
         {
             uint8_t vec[4];
             vec[0] = 0xFF; // byte de sincronização QUE O PYTHON TA ESPERANDO rpa começar a ler os dados
@@ -264,7 +264,7 @@ void uart_task(void *p)
             vec[3] = (uint8_t)((recebido.val >> 8) & 0xFF);
             uart_write_blocking(uart0, vec, 4); // 4.1.29.7.26. uart_write_blocking do manual da PICO
         }
-        if (xQueueReceive(xQueueBTNS, &info_botao, portMAX_DELAY))
+        if (xQueueReceive(xQueueBTNS, &info_botao, pdMS_TO_TICKS(100)))
         {
             uint8_t pacote[4];
             pacote[0] = 0xFE;          // prefixo para botão
@@ -288,8 +288,8 @@ int main()
     xSemaphore_BTN_SELECT = xSemaphoreCreateBinary();
     xSemaphore_BTN_START = xSemaphoreCreateBinary();
 
-    xQueueADC = xQueueCreate(64, sizeof(adc_t));
-    xQueueBTNS = xQueueCreate(256, sizeof(int));
+    xQueueADC = xQueueCreate(32, sizeof(adc_t));
+    xQueueBTNS = xQueueCreate(32, sizeof(int));
 
     xTaskCreate(x_task, "x task", 4095, NULL, 1, NULL);
     xTaskCreate(y_task, "y task", 4095, NULL, 1, NULL);
