@@ -5,137 +5,7 @@ import pyautogui
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
-from time import sleep
-
-# Estados de cada tecla
-# teclas = {"w": False, "a": False, "s": False, "d": False}
-teclas = {"up": False, "left": False, "down": False, "right": False}
-
-def solta_all_teclas():
-    for tecla in teclas:
-        if teclas[tecla]:
-            pyautogui.keyUp(tecla)
-            teclas[tecla] = False
-
-def controle_teclas_setas(ser):
-    estado_eixo_x = False
-    estado_eixo_y = False  
-
-    while True:
-        sync_byte = ser.read(size=1)
-        if not sync_byte or sync_byte[0] != 0xFF:
-            continue
-
-        data = ser.read(size=3)
-        if len(data) < 3:
-            continue
-
-        axis, value = parse_data(data)
-
-        if axis == 0:  # eixo X
-            if -30 <= value <= 30:
-                estado_eixo_x = False
-                if not estado_eixo_y:  # só solta se os dois estiverem na zona morta
-                    solta_all_teclas()
-                else:
-                    # solta só teclas de X
-                    if teclas["left"]:
-                        pyautogui.keyUp("left")
-                        teclas["left"] = False
-                    if teclas["right"]:
-                        pyautogui.keyUp("right")
-                        teclas["right"] = False
-            else:
-                estado_eixo_x = True
-                if value < -30:
-                    if not teclas["left"]:
-                        pyautogui.keyDown("left")
-                        teclas["left"] = True
-                    if teclas["right"]:
-                        pyautogui.keyUp("right")
-                        teclas["right"] = False
-                elif value > 30:
-                    if not teclas["right"]:
-                        pyautogui.keyDown("right")
-                        teclas["right"] = True
-                    if teclas["left"]:
-                        pyautogui.keyUp("left")
-                        teclas["left"] = False
-
-        elif axis == 1:  # eixo Y
-            if -30 <= value <= 30:
-                estado_eixo_y = False
-                if not estado_eixo_x:
-                    solta_all_teclas()
-                else:
-                    if teclas["up"]:
-                        pyautogui.keyUp("up")
-                        teclas["up"] = False
-                    if teclas["down"]:
-                        pyautogui.keyUp("down")
-                        teclas["down"] = False
-            else:
-                estado_eixo_y = True
-                if value < -30:
-                    if not teclas["up"]:
-                        pyautogui.keyDown("up")
-                        teclas["up"] = True
-                    if teclas["down"]:
-                        pyautogui.keyUp("down")
-                        teclas["down"] = False
-                elif value > 30:
-                    if not teclas["down"]:
-                        pyautogui.keyDown("down")
-                        teclas["down"] = True
-                    if teclas["up"]:
-                        pyautogui.keyUp("up")
-                        teclas["up"] = False
-
-
-def controle_teclas_awsd(ser):
-    while True:
-        sync_byte = ser.read(size=1)
-        if not sync_byte or sync_byte[0] != 0xFF:
-            continue
-        
-        data = ser.read(size=3)
-        if len(data) < 3:
-            continue
-
-        axis, value = parse_data(data)
-
-        # zona morta -> nehuma tecla fica apertada
-        if -30 <= value <= 30:
-            solta_all_teclas()
-            continue
-
-        if axis == 0:  # eixo X
-            if value < -30:
-                pyautogui.keyDown("a")
-                if not teclas["a"]:
-                    teclas["a"] = True
-                pyautogui.keyUp("d")
-                teclas["d"] = False
-            elif value > 30:
-                pyautogui.keyDown("d")
-                if not teclas["d"]:
-                    teclas["d"] = True
-                pyautogui.keyUp("a")
-                teclas["a"] = False
-
-        elif axis == 1:  # eixo Y
-            if value < -30:
-                pyautogui.keyDown("w")
-                if not teclas["w"]:
-                    teclas["w"] = True
-                pyautogui.keyUp("s")
-                teclas["s"] = False
-            elif value > 30:
-                pyautogui.keyDown("s")
-                if not teclas["s"]:
-                    teclas["s"] = True
-                pyautogui.keyUp("w")
-                teclas["w"] = False
+pyautogui.PAUSE = 0.0
 
 
 def move_mouse(axis, value):
@@ -163,6 +33,42 @@ def controle(ser):
             print(data)
             axis, value = parse_data(data)
             move_mouse(axis, value)
+
+def controle_teclas_setas(ser):
+    while True:
+        sync_byte = ser.read(size=1)
+        if not sync_byte or sync_byte[0] != 0xFF:
+            continue
+
+        data = ser.read(size=3)
+        if len(data) < 3:
+            continue
+
+        axis, value = parse_data(data)
+        print(f"Eixo: {axis} | Valor: {value}")
+
+        if axis == 0:
+            if value < -30:
+                pyautogui.keyDown("left")
+                pyautogui.keyUp("right")
+            elif value > 30:
+                pyautogui.keyDown("right")
+                pyautogui.keyUp("left")
+            else:
+                pyautogui.keyUp("left")
+                pyautogui.keyUp("right")
+
+        elif axis == 1:
+            if value < -30:
+                pyautogui.keyDown("up")
+                pyautogui.keyUp("down")
+            elif value > 30:
+                pyautogui.keyDown("down")
+                pyautogui.keyUp("up")
+            else:
+                pyautogui.keyUp("up")
+                pyautogui.keyUp("down")
+
 
 def serial_ports():
     """Retorna uma lista das portas seriais disponíveis na máquina."""
@@ -216,7 +122,6 @@ def conectar_porta( port_name, root, botao_conectar, status_label, mudar_cor_cir
         root.update()
 
         # Inicia o loop de leitura (bloqueante).
-        # controle(ser)
         controle_teclas_setas(ser)
 
     except KeyboardInterrupt:
@@ -314,3 +219,4 @@ def criar_janela():
 
 if __name__ == "__main__":
     criar_janela()
+

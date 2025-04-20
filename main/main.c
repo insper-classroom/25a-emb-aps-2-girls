@@ -26,7 +26,7 @@ int converte_escala_ADC(int sinal)
 {
     int escala_centrada_0 = sinal - 2047;
     int menor_resol = escala_centrada_0 * 255 / 2047;
-    if (menor_resol >= -30 && menor_resol <= 30)
+    if (menor_resol >= -50 && menor_resol <= 50)
     {
         return 0;
     }
@@ -156,7 +156,7 @@ void uart_task(void *p)
 int main()
 {
     stdio_init_all();
-    adc_init();  
+    adc_init();
 
     xQueueADC = xQueueCreate(64, sizeof(adc_t));
     xTaskCreate(x_task, "x task", 4095, NULL, 1, NULL);
