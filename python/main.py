@@ -35,39 +35,61 @@ def controle(ser):
             move_mouse(axis, value)
 
 def controle_teclas_setas(ser):
+    teclas_btn = {
+        0: "z",      # A
+        1: "x",      # B
+        2: "c",      # X
+        3: "v",      # Y
+        4: "space",  # SELECT
+        5: "enter",  # START
+    }
+
     while True:
         sync_byte = ser.read(size=1)
-        if not sync_byte or sync_byte[0] != 0xFF:
+        if not sync_byte:
             continue
 
-        data = ser.read(size=3)
-        if len(data) < 3:
-            continue
+        if sync_byte[0] == 0xFF:
+            data = ser.read(size=3)
+            if len(data) < 3:
+                continue
+            axis, value = parse_data(data)
+            print(f"[JOYSTICK] Eixo: {axis} | Valor: {value}")
 
-        axis, value = parse_data(data)
-        print(f"Eixo: {axis} | Valor: {value}")
+            if axis == 0:
+                if value < -30:
+                    pyautogui.keyDown("left")
+                    pyautogui.keyUp("right")
+                elif value > 30:
+                    pyautogui.keyDown("right")
+                    pyautogui.keyUp("left")
+                else:
+                    pyautogui.keyUp("left")
+                    pyautogui.keyUp("right")
+            elif axis == 1:
+                if value < -30:
+                    pyautogui.keyDown("up")
+                    pyautogui.keyUp("down")
+                elif value > 30:
+                    pyautogui.keyDown("down")
+                    pyautogui.keyUp("up")
+                else:
+                    pyautogui.keyUp("up")
+                    pyautogui.keyUp("down")
 
-        if axis == 0:
-            if value < -30:
-                pyautogui.keyDown("left")
-                pyautogui.keyUp("right")
-            elif value > 30:
-                pyautogui.keyDown("right")
-                pyautogui.keyUp("left")
-            else:
-                pyautogui.keyUp("left")
-                pyautogui.keyUp("right")
+        elif sync_byte[0] == 0xFE:
+            data = ser.read(size=3)
+            if len(data) < 3:
+                continue
+            btn_id = data[0]
+            pressed = data[1]
+            print(f"[BOTÃO] ID: {btn_id} | Pressionado: {pressed}")
 
-        elif axis == 1:
-            if value < -30:
-                pyautogui.keyDown("up")
-                pyautogui.keyUp("down")
-            elif value > 30:
-                pyautogui.keyDown("down")
-                pyautogui.keyUp("up")
-            else:
-                pyautogui.keyUp("up")
-                pyautogui.keyUp("down")
+            if pressed and btn_id in teclas_btn:
+                tecla = teclas_btn[btn_id]
+                print(f"[BOTÃO] Simulando toque na tecla: {tecla}")
+                pyautogui.press(teclas_btn[btn_id])
+
 
 
 def serial_ports():
