@@ -11,29 +11,8 @@ pyautogui.PAUSE = 0.0
 
 def move_mouse(axis, value):
     """Move o mouse de acordo com o eixo e valor recebidos."""
-    if axis == 0:
-        pyautogui.moveRel(value, 0)
-    elif axis == 1:
-        pyautogui.moveRel(0, value)
-
-# def controle(ser):
-#     """
-#     Loop principal que lê bytes da porta serial em loop infinito.
-#     Aguarda o byte 0xFF e então lê 3 bytes: axis (1 byte) + valor (2 bytes).
-#     """
-#     while True:
-#         # Aguardar byte de sincronização
-#         sync_byte = ser.read(size=1)
-#         if not sync_byte:
-#             continue
-#         if sync_byte[0] == 0xFF:
-#             # Ler 3 bytes (axis + valor(2b))
-#             data = ser.read(size=3)
-#             if len(data) < 3:
-#                 continue
-#             print(data)
-#             axis, value = parse_data(data)
-#             move_mouse(axis, value)
+    if axis == 2:
+        pyautogui.click()
 
 
 def controle_teclas_setas(ser):
@@ -48,6 +27,7 @@ def controle_teclas_setas(ser):
 
     while True:
         sync_byte = ser.read(size=1)
+        print(sync_byte)
         if not sync_byte:
             continue
 
@@ -85,12 +65,18 @@ def controle_teclas_setas(ser):
                 continue
             btn_id = data[0]
             pressed = data[1]
-            print(f"[BOTÃO] ID: {btn_id} | Pressionado: {pressed}")
-
+    
             if pressed and btn_id in teclas_btn:
                 tecla = teclas_btn[btn_id]
-                print(f"[BOTÃO] Simulando toque na tecla: {tecla}")
                 pyautogui.press(teclas_btn[btn_id])
+
+        elif sync_byte[0] == 0xFD:
+            data = ser.read(size=3)
+            if len(data) < 3:
+                continue
+            print(data)
+            axis, value = parse_data(data)
+            move_mouse(axis, value)
 
 
 
