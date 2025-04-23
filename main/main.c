@@ -343,7 +343,7 @@ void mpu6050_task(void *p)
 
         FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, SAMPLE_PERIOD);
 
-        const FusionEuler euler = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
+        // const FusionEuler euler = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
  
         float aceler_x_g = accelerometer.axis.x;
         if (aceler_x_g  > 1.3 )
