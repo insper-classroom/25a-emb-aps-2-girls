@@ -38,12 +38,12 @@ def move_mouse(axis, value):
 
 def controle_teclas_setas(ser):
     teclas_btn = {
-        0: "z",      # A
-        1: "x",      # B
-        2: "a",      # X
-        3: "s",      # Y
-        4: "shift",  # SELECT
-        5: "enter",  # START
+        0: "Z",      # A
+        1: "X",      # B
+        2: "A",      # X
+        3: "S",      # Y
+        4: "LShift",  # SELECT
+        5: "Enter",  # START
     }
 
     while True:
@@ -59,22 +59,22 @@ def controle_teclas_setas(ser):
             print(f"[JOYSTICK] Eixo: {axis} | Valor: {value}")
 
             if axis == 0:
-                if value < -30:
-                    pyautogui.keyDown("left")
+                if value < -50:
                     pyautogui.keyUp("right")
-                elif value > 30:
-                    pyautogui.keyDown("right")
+                    pyautogui.keyDown("left")
+                elif value > 50:
                     pyautogui.keyUp("left")
+                    pyautogui.keyDown("right")
                 else:
                     pyautogui.keyUp("left")
                     pyautogui.keyUp("right")
             elif axis == 1:
-                if value < -30:
-                    pyautogui.keyDown("up")
+                if value < -50:
                     pyautogui.keyUp("down")
-                elif value > 30:
-                    pyautogui.keyDown("down")
+                    pyautogui.keyDown("up")
+                if value > 50:
                     pyautogui.keyUp("up")
+                    pyautogui.keyDown("down")
                 else:
                     pyautogui.keyUp("up")
                     pyautogui.keyUp("down")

@@ -47,7 +47,7 @@ void btn_callback(uint gpio, uint32_t events)
         xSemaphoreGiveFromISR(xSemaphore_BTN_B, 0);
     }
     if (gpio == BTN_X && events == 0x4)
-    { // Xll edge
+    { // fall edge
         xSemaphoreGiveFromISR(xSemaphore_BTN_X, 0);
     }
     if (gpio == BTN_Y && events == 0x4)
@@ -117,7 +117,7 @@ void btn_task(void *p)
     {
         if (xSemaphoreTake(xSemaphore_BTN_A, pdMS_TO_TICKS(50)) == pdTRUE)
         {
-            int info_botao = 0; // botao pressionado
+            int info_botao = 0;
             xQueueSend(xQueueBTNS, &info_botao, 0);
         }
         if (xSemaphoreTake(xSemaphore_BTN_B, pdMS_TO_TICKS(50)) == pdTRUE)
@@ -145,13 +145,13 @@ void btn_task(void *p)
             int info_botao = 5;
             xQueueSend(xQueueBTNS, &info_botao, 0);
         }
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 void x_task(void *p)
 {
-    adc_gpio_init(GPx);
     int dados[5] = {0};
+    adc_gpio_init(GPx);
     int numeros = 0;
 
     while (1)
@@ -255,8 +255,9 @@ void uart_task(void *p)
 
     while (1)
     {
-        if (xQueueReceive(xQueueADC, &recebido, pdMS_TO_TICKS(100)))
+        if (xQueueReceive(xQueueADC, &recebido, pdMS_TO_TICKS(10)))
         {
+
             uint8_t vec[4];
             vec[0] = 0xFF; // byte de sincronização QUE O PYTHON TA ESPERANDO rpa começar a ler os dados
             vec[1] = (uint8_t)recebido.axis;
@@ -264,12 +265,11 @@ void uart_task(void *p)
             vec[3] = (uint8_t)((recebido.val >> 8) & 0xFF);
             uart_write_blocking(uart0, vec, 4); // 4.1.29.7.26. uart_write_blocking do manual da PICO
         }
-        if (xQueueReceive(xQueueBTNS, &info_botao, pdMS_TO_TICKS(100)))
-        {
+        if (xQueueReceive(xQueueBTNS, &info_botao, pdMS_TO_TICKS(10))){
             uint8_t pacote[4];
-            pacote[0] = 0xFE;          // prefixo para botão
+            pacote[0] = 0xFE;                // prefixo para botão
             pacote[1] = (uint8_t)info_botao; // ID do botão
-            pacote[2] = 1;             // pressiondao = true
+            pacote[2] = 1;                   // pressiondao = true
             pacote[3] = 0;
             uart_write_blocking(uart0, pacote, 4);
         }
@@ -280,7 +280,7 @@ int main()
 {
     stdio_init_all();
     adc_init();
-
+    
     xSemaphore_BTN_A = xSemaphoreCreateBinary();
     xSemaphore_BTN_B = xSemaphoreCreateBinary();
     xSemaphore_BTN_X = xSemaphoreCreateBinary();
@@ -288,8 +288,8 @@ int main()
     xSemaphore_BTN_SELECT = xSemaphoreCreateBinary();
     xSemaphore_BTN_START = xSemaphoreCreateBinary();
 
-    xQueueADC = xQueueCreate(32, sizeof(adc_t));
-    xQueueBTNS = xQueueCreate(32, sizeof(int));
+    xQueueBTNS = xQueueCreate(10, sizeof(int));
+    xQueueADC = xQueueCreate(10, sizeof(adc_t));
 
     xTaskCreate(x_task, "x task", 4095, NULL, 1, NULL);
     xTaskCreate(y_task, "y task", 4095, NULL, 1, NULL);
@@ -301,3 +301,7 @@ int main()
     while (true)
         ;
 }
+
+
+
+
