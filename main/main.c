@@ -217,7 +217,6 @@ void x_task(void *p)
     adc_gpio_init(GPx);
     int numeros = 0;
     int ultimo_comando = -1;
-    int contador_envio = 0;
 
     while (1)
     {
@@ -264,13 +263,9 @@ void x_task(void *p)
                 adc_x.val = 0; // NEUTRO
             }
 
-            //envia se mudouuuu ou se deve manter pressionado!!!!!!
-            if (adc_x.val != ultimo_comando || (adc_x.val != 0 && contador_envio >= 200 / 5)) {
+            if (adc_x.val != ultimo_comando) {
                 xQueueSend(xQueueX, &adc_x, 0);
                 ultimo_comando = adc_x.val;
-                contador_envio = 0;
-            } else {
-                contador_envio++;
             }
         }
         vTaskDelay(pdMS_TO_TICKS(5));
@@ -283,13 +278,11 @@ void y_task(void *p)
     int dados[5] = {0};
     int numeros = 0;
     int ultimo_comando = -1;
-    int contador_envio = 0;
 
     while (1)
     {
         adc_select_input(1); // GPIO27 -> y
         int resulty = adc_read();
-        printf("result y %d\n", resulty);
 
         if (numeros < 5)
         {
@@ -331,12 +324,9 @@ void y_task(void *p)
                 adc_y.val = 0; // NEUTRO
             }
 
-            if (adc_y.val != ultimo_comando || (adc_y.val != 0 && contador_envio >= 200 / 5)) {
+            if (adc_y.val != ultimo_comando) {
                 xQueueSend(xQueueY, &adc_y, 0);
                 ultimo_comando = adc_y.val;
-                contador_envio = 0;
-            } else {
-                contador_envio++;
             }
         }
         vTaskDelay(pdMS_TO_TICKS(5));
@@ -376,7 +366,8 @@ void mpu6050_task(void *p)
         FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, SAMPLE_PERIOD);
 
         float aceler_x_g = accelerometer.axis.x;
-        if (aceler_x_g > 1.3)
+        // printf("%.d\n",(int)(aceler_x_g * 100));
+        if (aceler_x_g > 1.4)
         {
             coord ace;
             ace.axis = 2;

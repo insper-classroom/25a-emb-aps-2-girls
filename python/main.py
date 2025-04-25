@@ -10,10 +10,24 @@ import time
 pyautogui.PAUSE = 0.0
 
 
-def move_mouse(axis, value):
-    """Move o mouse de acordo com o eixo e valor recebidos."""
+def golpe_especial_mpu(axis, value):
+    #TROVÃO NO PERSONAGEM ROXO
     if axis == 2:
-        pyautogui.click()
+        pyautogui.keyDown("left")
+        time.sleep(0.05)
+        pyautogui.keyUp("left")
+
+        time.sleep(0.03)
+
+        pyautogui.keyDown("left")
+        time.sleep(0.05)
+        pyautogui.keyUp("left")
+
+        time.sleep(0.03)
+
+        pyautogui.keyDown("s")
+        time.sleep(0.05)
+        pyautogui.keyUp("s")
 
 estado_anterior = {
     "x": "middle",
@@ -40,7 +54,7 @@ def controle_teclas_setas(ser):
             if len(data) < 3:
                 continue
             axis, value = parse_data(data)
-            # print(f"[JOYSTICK] Eixo: {axis} | Valor: {value}")
+            print(f"[JOYSTICK] Eixo: {axis} | Valor: {value}")
             if axis == 0: 
                 if value == 3 and estado_anterior["x"] != "right":
                     pyautogui.keyUp("left")
@@ -88,7 +102,7 @@ def controle_teclas_setas(ser):
                 continue
             # print(data)
             axis, value = parse_data(data)
-            move_mouse(axis, value)
+            golpe_especial_mpu(axis, value)
 
 def serial_ports():
     """Retorna uma lista das portas seriais disponíveis na máquina."""
