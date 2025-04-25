@@ -14,12 +14,24 @@
 #include "mpu6050.h"
 #include "Fusion.h"
 
-#define SAMPLE_PERIOD (0.01f) 
+#define SAMPLE_PERIOD (0.01f)
 
 const int MPU_ADDRESS = 0x68;
 const int I2C_SDA_GPIO = 4;
 const int I2C_SCL_GPIO = 5;
+const int BTN_A = 15;
+const int BTN_B = 14;
+const int BTN_X = 13;
+const int BTN_Y = 12;
+const int BTN_SELECT = 10;
+const int BTN_START = 11;
+const int GPx = 28;
+const int GPy = 27;
+
 QueueHandle_t xQueuePos;
+QueueHandle_t xQueueBTNS;
+QueueHandle_t xQueueX;
+QueueHandle_t xQueueY;
 
 typedef struct coord
 {
@@ -33,25 +45,12 @@ typedef struct adc
     int val;
 } adc_t;
 
-const int BTN_A = 15;
-const int BTN_B = 14;
-const int BTN_X = 13;
-const int BTN_Y = 12;
-const int BTN_SELECT = 10;
-const int BTN_START = 11;
-const int GPx = 28;
-const int GPy = 27;
-
-QueueHandle_t xQueueADC;
-QueueHandle_t xQueueBTNS;
-
 SemaphoreHandle_t xSemaphore_BTN_A;
 SemaphoreHandle_t xSemaphore_BTN_B;
 SemaphoreHandle_t xSemaphore_BTN_X;
 SemaphoreHandle_t xSemaphore_BTN_Y;
 SemaphoreHandle_t xSemaphore_BTN_SELECT;
 SemaphoreHandle_t xSemaphore_BTN_START;
-
 
 static void mpu6050_reset()
 {
@@ -132,7 +131,7 @@ int converte_escala_ADC(int sinal)
 {
     int escala_centrada_0 = sinal - 2047;
     int menor_resol = escala_centrada_0 * 255 / 2047;
-    if (menor_resol >= -50 && menor_resol <= 50)
+    if (menor_resol >= -150 && menor_resol <= 150)
     {
         return 0;
     }
@@ -209,7 +208,7 @@ void btn_task(void *p)
             int info_botao = 5;
             xQueueSend(xQueueBTNS, &info_botao, 0);
         }
-        vTaskDelay(pdMS_TO_TICKS(50));
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 void x_task(void *p)
@@ -217,6 +216,8 @@ void x_task(void *p)
     int dados[5] = {0};
     adc_gpio_init(GPx);
     int numeros = 0;
+    int ultimo_comando = -1;
+    int contador_envio = 0;
 
     while (1)
     {
@@ -249,15 +250,30 @@ void x_task(void *p)
             int resultado_convert = converte_escala_ADC(media);
             adc_t adc_x;
             adc_x.axis = 0;
-            adc_x.val = resultado_convert;
-
-            if (adc_x.val != 0)
+            
+            if (resultado_convert < -150)
             {
-                xQueueSend(xQueueADC, &adc_x, 0);
+                adc_x.val = 4; // LEFT
+            }
+            else if (resultado_convert > 150)
+            {
+                adc_x.val = 3; // RIGHT
+            }
+            else
+            {
+                adc_x.val = 0; // NEUTRO
+            }
+
+            //envia se mudouuuu ou se deve manter pressionado!!!!!!
+            if (adc_x.val != ultimo_comando || (adc_x.val != 0 && contador_envio >= 200 / 5)) {
+                xQueueSend(xQueueX, &adc_x, 0);
+                ultimo_comando = adc_x.val;
+                contador_envio = 0;
+            } else {
+                contador_envio++;
             }
         }
-
-        vTaskDelay(pdMS_TO_TICKS(50));
+        vTaskDelay(pdMS_TO_TICKS(5));
     }
 }
 
@@ -266,11 +282,14 @@ void y_task(void *p)
     adc_gpio_init(GPy);
     int dados[5] = {0};
     int numeros = 0;
+    int ultimo_comando = -1;
+    int contador_envio = 0;
 
     while (1)
     {
         adc_select_input(1); // GPIO27 -> y
         int resulty = adc_read();
+        printf("result y %d\n", resulty);
 
         if (numeros < 5)
         {
@@ -298,20 +317,34 @@ void y_task(void *p)
             int resultado_convert = converte_escala_ADC(media);
             adc_t adc_y;
             adc_y.axis = 1;
-            adc_y.val = resultado_convert;
-            if (adc_y.val != 0)
+
+            if (resultado_convert < -150)
             {
-                xQueueSend(xQueueADC, &adc_y, 0);
+                adc_y.val = 1; // UP
+            }
+            else if (resultado_convert > 150)
+            {
+                adc_y.val = 2; // DOWN
+            }
+            else
+            {
+                adc_y.val = 0; // NEUTRO
+            }
+
+            if (adc_y.val != ultimo_comando || (adc_y.val != 0 && contador_envio >= 200 / 5)) {
+                xQueueSend(xQueueY, &adc_y, 0);
+                ultimo_comando = adc_y.val;
+                contador_envio = 0;
+            } else {
+                contador_envio++;
             }
         }
-
-        vTaskDelay(pdMS_TO_TICKS(50));
+        vTaskDelay(pdMS_TO_TICKS(5));
     }
 }
 
 void mpu6050_task(void *p)
 {
-    // configuracao do I2C
     i2c_init(i2c_default, 400 * 1000);
     gpio_set_function(I2C_SDA_GPIO, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SCL_GPIO, GPIO_FUNC_I2C);
@@ -323,7 +356,6 @@ void mpu6050_task(void *p)
 
     mpu6050_reset();
     int16_t acceleration[3], gyro[3], temp;
-
 
     while (1)
     {
@@ -343,47 +375,52 @@ void mpu6050_task(void *p)
 
         FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, SAMPLE_PERIOD);
 
-        // const FusionEuler euler = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
- 
         float aceler_x_g = accelerometer.axis.x;
-        if (aceler_x_g  > 1.3 )
+        if (aceler_x_g > 1.3)
         {
             coord ace;
             ace.axis = 2;
             ace.val = 1;
             xQueueSend(xQueuePos, &ace, 0);
         }
-
-
-        vTaskDelay(pdMS_TO_TICKS(15));
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
 void uart_task(void *p)
 {
-    adc_t recebido;
+    adc_t recebido_x;
+    adc_t recebido_y;
     int info_botao;
     coord coord;
     uart_init(uart0, 115200);
-
     gpio_set_function(0, GPIO_FUNC_UART);
     gpio_set_function(1, GPIO_FUNC_UART);
 
     while (1)
     {
-        if (xQueueReceive(xQueueADC, &recebido, pdMS_TO_TICKS(10)))
+        if (xQueueReceive(xQueueX, &recebido_x, pdMS_TO_TICKS(5)))
         {
-
             uint8_t vec[4];
             vec[0] = 0xFF; // byte de sincronização QUE O PYTHON TA ESPERANDO rpa começar a ler os dados
-            vec[1] = (uint8_t)recebido.axis;
-            vec[2] = (uint8_t)(recebido.val & 0xFF);
-            vec[3] = (uint8_t)((recebido.val >> 8) & 0xFF);
+            vec[1] = (uint8_t)recebido_x.axis;
+            vec[2] = (uint8_t)(recebido_x.val & 0xFF);
+            vec[3] = (uint8_t)((recebido_x.val >> 8) & 0xFF);
             uart_write_blocking(uart0, vec, 4); // 4.1.29.7.26. uart_write_blocking do manual da PICO
         }
-        if (xQueueReceive(xQueueBTNS, &info_botao, pdMS_TO_TICKS(10))){
+        if (xQueueReceive(xQueueY, &recebido_y, pdMS_TO_TICKS(5)))
+        {
+            uint8_t vec[4];
+            vec[0] = 0xFF; // byte de sincronização QUE O PYTHON TA ESPERANDO rpa começar a ler os dados
+            vec[1] = (uint8_t)recebido_y.axis;
+            vec[2] = (uint8_t)(recebido_y.val & 0xFF);
+            vec[3] = (uint8_t)((recebido_y.val >> 8) & 0xFF);
+            uart_write_blocking(uart0, vec, 4); // 4.1.29.7.26. uart_write_blocking do manual da PICO
+        }
+        if (xQueueReceive(xQueueBTNS, &info_botao, pdMS_TO_TICKS(10)))
+        {
             uint8_t pacote[4];
-            pacote[0] = 0xFE;             
+            pacote[0] = 0xFE;
             pacote[1] = (uint8_t)info_botao; // ID do botão
             pacote[2] = 1;                   // pressionando = true
             pacote[3] = 0;
@@ -397,7 +434,7 @@ void uart_task(void *p)
             vec[2] = (uint8_t)(coord.val & 0xFF);
             vec[3] = (uint8_t)((coord.val >> 8) & 0xFF);
             uart_write_blocking(uart0, vec, 4); // 4.1.29.7.26. uart_write_blocking do manual da PICO
-       }
+        }
     }
 }
 
@@ -406,7 +443,6 @@ int main()
     stdio_init_all();
     adc_init();
 
-
     xSemaphore_BTN_A = xSemaphoreCreateBinary();
     xSemaphore_BTN_B = xSemaphoreCreateBinary();
     xSemaphore_BTN_X = xSemaphoreCreateBinary();
@@ -414,10 +450,11 @@ int main()
     xSemaphore_BTN_SELECT = xSemaphoreCreateBinary();
     xSemaphore_BTN_START = xSemaphoreCreateBinary();
 
-    xQueueBTNS = xQueueCreate(10, sizeof(int));
-    xQueueADC = xQueueCreate(10, sizeof(adc_t));
-    xQueuePos = xQueueCreate(30, sizeof(coord));
-    
+    xQueueBTNS = xQueueCreate(32, sizeof(int));
+    xQueueX = xQueueCreate(32, sizeof(adc_t));
+    xQueueY = xQueueCreate(32, sizeof(adc_t));
+    xQueuePos = xQueueCreate(32, sizeof(coord));
+
     xTaskCreate(x_task, "x task", 4095, NULL, 1, NULL);
     xTaskCreate(y_task, "y task", 4095, NULL, 1, NULL);
     xTaskCreate(uart_task, "uart task", 4095, NULL, 1, NULL);
@@ -429,7 +466,3 @@ int main()
     while (true)
         ;
 }
-
-
-
-

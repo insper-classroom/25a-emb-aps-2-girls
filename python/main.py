@@ -5,6 +5,7 @@ import pyautogui
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
+import time
 # import threading
 pyautogui.PAUSE = 0.0
 
@@ -14,20 +15,23 @@ def move_mouse(axis, value):
     if axis == 2:
         pyautogui.click()
 
+estado_anterior = {
+    "x": "middle",
+    "y": "middle",  
+}
 
 def controle_teclas_setas(ser):
     teclas_btn = {
-        0: "Z",      # A
-        1: "X",      # B
-        2: "A",      # X
-        3: "S",      # Y
+        0: "z",      # A
+        1: "x",      # B
+        2: "a",      # X
+        3: "s",      # Y
         4: "LShift",  # SELECT
         5: "Enter",  # START
     }
 
     while True:
         sync_byte = ser.read(size=1)
-        print(sync_byte)
         if not sync_byte:
             continue
 
@@ -36,28 +40,34 @@ def controle_teclas_setas(ser):
             if len(data) < 3:
                 continue
             axis, value = parse_data(data)
-            print(f"[JOYSTICK] Eixo: {axis} | Valor: {value}")
-
-            if axis == 0:
-                if value < -50:
-                    pyautogui.keyUp("right")
-                    pyautogui.keyDown("left")
-                elif value > 50:
+            # print(f"[JOYSTICK] Eixo: {axis} | Valor: {value}")
+            if axis == 0: 
+                if value == 3 and estado_anterior["x"] != "right":
                     pyautogui.keyUp("left")
                     pyautogui.keyDown("right")
-                else:
+                    estado_anterior["x"] = "right"
+                elif value == 4 and estado_anterior["x"] != "left":
+                    pyautogui.keyUp("right")
+                    pyautogui.keyDown("left")
+                    estado_anterior["x"] = "left"
+                elif value == 0 and estado_anterior["x"] != "middle":
                     pyautogui.keyUp("left")
                     pyautogui.keyUp("right")
-            elif axis == 1:
-                if value < -50:
+                    estado_anterior["x"] = "middle"
+
+            elif axis == 1: 
+                if value == 1 and estado_anterior["y"] != "up":
                     pyautogui.keyUp("down")
                     pyautogui.keyDown("up")
-                if value > 50:
+                    estado_anterior["y"] = "up"
+                elif value == 2 and estado_anterior["y"] != "down":
                     pyautogui.keyUp("up")
                     pyautogui.keyDown("down")
-                else:
+                    estado_anterior["y"] = "down"
+                elif value == 0 and estado_anterior["y"] != "middle":
                     pyautogui.keyUp("up")
                     pyautogui.keyUp("down")
+                    estado_anterior["y"] = "middle"
 
         elif sync_byte[0] == 0xFE:
             data = ser.read(size=3)
@@ -65,20 +75,20 @@ def controle_teclas_setas(ser):
                 continue
             btn_id = data[0]
             pressed = data[1]
-    
             if pressed and btn_id in teclas_btn:
                 tecla = teclas_btn[btn_id]
-                pyautogui.press(teclas_btn[btn_id])
+                # print(f"tecla = {tecla}")
+                pyautogui.keyDown(teclas_btn[btn_id])
+                time.sleep(0.2) 
+                pyautogui.keyUp(teclas_btn[btn_id])
 
         elif sync_byte[0] == 0xFD:
             data = ser.read(size=3)
             if len(data) < 3:
                 continue
-            print(data)
+            # print(data)
             axis, value = parse_data(data)
             move_mouse(axis, value)
-
-
 
 def serial_ports():
     """Retorna uma lista das portas seriais disponíveis na máquina."""
