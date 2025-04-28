@@ -1,55 +1,79 @@
-# Controle Customizado para jogo de corrida de carros
+# Controle Customizado para Mortal Kombat (SNES)
 
 ## Jogo
-O controle será desenvolvido para um jogo de corrida, provavelmente o *Need for Speed*. Ele será projetado para proporcionar uma experiência imersiva ao jogador.
+O controle foi desenvolvido para o clássico jogo de luta **Mortal Kombat** do **Super Nintendo (SNES)**.
 
 ## Ideia do Controle
-A proposta do controle é ser um dispositivo de mesa com um volante baseado em acelerômetro, um botão liga/desliga e pedais para aceleração e frenagem que ficariam no chão, para dar a impressão de que o jogador está em um carro.
+A proposta é um dispositivo com:
+- **Botões físicos** para ataques, defesa e ações especiais.
+- **Joystick analógico** para movimentação (cima, baixo, esquerda e direita).
+- **Acelerômetro (MPU6050)** para detectar movimentos bruscos e executar golpes especiais.
+- Comunicação **Bluetooth** com o computador via módulo **HC-06**.
 
 ## Inputs e Outputs
-### **Entradas (Inputs)**
-- **Acelerômetro:** Para capturar os movimentos do volante.
-- **Potenciômetros:**
-  - **Pedal de aceleração**
-  - **Pedal de freio**
-- **Botão liga/desliga:** Para ativar ou desativar o controle.
 
-### **Saídas (Outputs)**
-- **Buzzer para feedback sonoro/vibratório.**
+### Entradas (Inputs)
+- **Botões Físicos:**
+  - `BTN_A`: Golpes diversos / defesa dependendo do personagem
+  - `BTN_B`: Golpes diversos / defesa dependendo do personagem
+  - `BTN_X`: Golpes diversos / defesa dependendo do personagem
+  - `BTN_Y`: Golpes diversos / defesa dependendo do personagem
+  - `BTN_SELECT`: Selecionar opções no jogo
+  - `BTN_START`: Iniciar e selecionar opções
+
+- **Entradas do Joystick:**
+  - **GPx (GPIO28)**: Movimento Esquerda/Direita
+  - **GPy (GPIO27)**: Movimento Cima/Baixo
+
+- **Acelerômetro (MPU6050):**
+  - Detecta movimentos bruscos no eixo X para comandos especiais.
+
+### Saídas (Outputs)
+- Comunicação de comandos via **UART Bluetooth** para o computador, interpretando inputs como movimentos e ações no jogo.
+
+---
 
 ## Protocolo Utilizado
-- **UART (Universal Asynchronous Receiver-Transmitter)** para comunicação entre o controle e o computador.
-- **GPIO Interrupts** para capturar eventos dos botões e potenciômetros.
+- **UART (Universal Asynchronous Receiver-Transmitter)** para transmissão de pacotes de dados via Bluetooth.
+- **GPIO Interrupts** para captura rápida e eficiente dos eventos de botões.
+
+---
 
 ## Diagrama de Blocos Explicativo do Firmware
-### **Estrutura Geral**
----
 
-![Estrutura](diagrama.png)
+![Diagrama do Sistema](diagrama.png)
 
 ---
 
-#### **Principais Componentes do RTOS**
-- **Tasks:**
-  - Task de leitura das entradas (acelerômetro, potenciômetros, botão liga/desliga)
-  - Task de envio de comandos via UART
-  - Task de controle do buzzer para feedback sonoro
+## Principais Componentes do RTOS
 
-- **Filas:**
-  - Fila de eventos de entrada
-  - Fila de comandos para o jogo
-  - Fila de feedback sonoro para o buzzer
+### Tasks
+- `x_task`: Leitura do eixo X (Esquerda/Direita) do joystick analógico.
+- `y_task`: Leitura do eixo Y (Cima/Baixo) do joystick analógico.
+- `btn_task`: Captura de eventos dos botões físicos usando interrupções GPIO.
+- `mpu6050_task`: Leitura do acelerômetro para detectar movimentos bruscos.
+- `hc06_task`: Envio dos comandos capturados via UART Bluetooth.
 
-- **Semáforos:**
-  - Verificação do estado de conexão
+### Filas (Queues)
+- `xQueueBTNS`: Fila de eventos dos botões físicos.
+- `xQueueX`: Fila de eventos do eixo X do direcional.
+- `xQueueY`: Fila de eventos do eixo Y do direcional.
+- `xQueuePos`: Fila de eventos do acelerômetro (movimentos especiais).
 
-- **Interrupts:**
-  - Callbacks para os botões e potenciômetros
+### Semáforos (Semaphores)
+- `xSemaphore_BTN_A`
+- `xSemaphore_BTN_B`
+- `xSemaphore_BTN_X`
+- `xSemaphore_BTN_Y`
+- `xSemaphore_BTN_SELECT`
+- `xSemaphore_BTN_START`
+
+Cada botão tem seu próprio semáforo para garantir a sincronização correta dos eventos capturados por interrupção.
+
+### Interrupts
+- **GPIO IRQs** para detectar borda de descida nos botões (`falling edge`).
+---
 
 ## Imagens do Controle
-### **Proposta Inicial**
----
 
-![Proposta](controle.jpg)
-
----
+![Imagem do Controle](controle.jpg)
